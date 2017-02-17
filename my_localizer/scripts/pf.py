@@ -27,6 +27,7 @@ from occupancy_field import OccupancyField
 from helper_functions import (convert_pose_inverse_transform,
                               convert_translation_rotation_to_pose,
                               convert_pose_to_xy_and_theta,
+                              angle_normalize,
                               angle_diff)
 
 class Particle(object):
@@ -156,8 +157,11 @@ class ParticleFilter:
             self.current_odom_xy_theta = new_odom_xy_theta
             return
 
-        # TODO: modify particles using delta
         # For added difficulty: Implement sample_motion_odometry (Prob Rob p 136)
+        for particle in self.particle_cloud:
+            particle.x += delta[0]
+            particle.y += delta[1]
+            particle.theta = angle_normalize(particle.theta + delta[2])
 
     def map_calc_range(self,x,y,theta):
         """ Difficulty Level 3: implement a ray tracing likelihood model... Let me know if you are interested """
