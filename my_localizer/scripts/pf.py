@@ -44,7 +44,7 @@ class Particle(object):
             x: the x-coordinate of the hypothesis relative to the map frame
             y: the y-coordinate of the hypothesis relative ot the map frame
             theta: the yaw of the hypothesis relative to the map frame
-            w: the particle weight (the class does not ensure that particle weights are normalized """ 
+            w: the particle weight (the class does not ensure that particle weights are normalized """
         self.w = w
         self.theta = theta
         self.x = x
@@ -55,7 +55,8 @@ class Particle(object):
         orientation_tuple = tf.transformations.quaternion_from_euler(0,0,self.theta)
         return Pose(position=Point(x=self.x,y=self.y,z=0), orientation=Quaternion(x=orientation_tuple[0], y=orientation_tuple[1], z=orientation_tuple[2], w=orientation_tuple[3]))
 
-    # TODO: define additional helper functions if needed
+    def rotate(self, angle):
+        self.theta = angle_normalize(angle + self.theta)
 
 class ParticleFilter:
     """ The class that represents a Particle Filter ROS Node
@@ -160,11 +161,21 @@ class ParticleFilter:
             self.current_odom_xy_theta = new_odom_xy_theta
             return
 
-        # For added difficulty: Implement sample_motion_odometry (Prob Rob p 136)
+        dx, dy, dtheta = delta
+        ds = math.hypot(dx, dy)
+        rotationOne = math.atan2(dy, dx) - self.current_odom_xy_theta[2]
+        rotationTwo = dtheta - rotationOne
+
         for particle in self.particle_cloud:
-            particle.x += delta[0]
-            particle.y += delta[1]
-            particle.theta = angle_normalize(particle.theta + delta[2])
+            # Rotate particle to face its destination coordinate
+            particle.rotate(rotationOne)
+
+            # Advance the particle forward in its coordinate frame
+            particle.x += ds*math.cos(particle.theta)
+            particle.y += ds*math.sin(particle.theta)
+
+            # Rotate particle to face its final heading
+            particle.rotate(rotationTwo)
 
     def map_calc_range(self,x,y,theta):
         """ Difficulty Level 3: implement a ray tracing likelihood model... Let me know if you are interested """
