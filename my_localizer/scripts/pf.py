@@ -20,7 +20,7 @@ import math
 import time
 
 import numpy as np
-from numpy.random import random_sample
+from numpy.random import random_sample, normal
 from sklearn.neighbors import NearestNeighbors
 from occupancy_field import OccupancyField
 
@@ -86,7 +86,7 @@ class ParticleFilter:
         self.base_frame = "base_link"   # the frame of the robot base
         self.map_frame = "map"          # the name of the map coordinate frame
         self.odom_frame = "odom"        # the name of the odometry coordinate frame
-        self.scan_topic = "scan"        # the topic where we will get laser scans from 
+        self.scan_topic = "scan"        # the topic where we will get laser scans from
 
         self.n_particles = 300          # the number of particles to use
 
@@ -95,7 +95,10 @@ class ParticleFilter:
 
         self.laser_max_distance = 2.0   # maximum penalty to assess in the likelihood field model
 
-        # TODO: define additional constants if needed
+        # Define additional constants
+        self.initial_position_deviation = 1		# the std deviation (meters) to use for the initial particles' position distribution
+        self.initial_angle_deviation = 60 		# the std deviation (degrees) to use for the initial particles' angle distribution
+
 
         # Setup pubs and subs
 
@@ -223,25 +226,34 @@ class ParticleFilter:
                       particle cloud around.  If this input is ommitted, the odometry will be used """
         if xy_theta == None:
             xy_theta = convert_pose_to_xy_and_theta(self.odom_pose.pose)
-        self.particle_cloud = []
-        # TODO create particles
+
+        x, y, theta = xy_theta
+
+        self.particle_cloud = [Particle(
+        	normal(x, self.initial_position_deviation),
+        	normal(y, self.initial_position_deviation),
+        	normal(theta, math.radians(self.initial_angle_deviation)),
+        ) for n in xrange(self.n_particles)]
 
         self.normalize_particles()
         self.update_robot_pose()
 
     def normalize_particles(self):
         """ Make sure the particle weights define a valid distribution (i.e. sum to 1.0) """
-        pass
-        # TODO: implement this
+        normFactor = sum([p.w for p in self.particle_cloud])
+        for particle in self.particle_cloud:
+        	particle.w /= normFactor
 
     def publish_particles(self, msg):
         particles_conv = []
         for p in self.particle_cloud:
             particles_conv.append(p.as_pose())
         # actually send the message so that we can view it in rviz
-        self.particle_pub.publish(PoseArray(header=Header(stamp=rospy.Time.now(),
-                                            frame_id=self.map_frame),
-                                  poses=particles_conv))
+        self.particle_pub.publish(PoseArray(
+        	header=Header(stamp=rospy.Time.now(),
+          frame_id=self.map_frame),
+          poses=particles_conv)
+        )
 
     def scan_received(self, msg):
         """ This is the default logic for what to do when processing scan data.
