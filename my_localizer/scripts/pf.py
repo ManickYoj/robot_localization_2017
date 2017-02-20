@@ -118,6 +118,8 @@ class ParticleFilter:
 
         self.particle_cloud = []
 
+    
+
         # change use_projected_stable_scan to True to use point clouds instead of laser scans
         self.use_projected_stable_scan = False
         self.last_projected_stable_scan = None
@@ -130,9 +132,12 @@ class ParticleFilter:
         # request the map from the map server, the map should be of type nav_msgs/OccupancyGrid
         # TODO: fill in the appropriate service call here.  The resultant map should be assigned be passed
         #       into the init method for OccupancyField
+        rospy.wait_for_service('static_map')
+        getMap = rospy.ServiceProxy('static_map', GetMap)
+
 
         # for now we have commented out the occupancy field initialization until you can successfully fetch the map
-        #self.occupancy_field = OccupancyField(map)
+        self.occupancy_field = OccupancyField(getMap().map)
         self.initialized = True
 
     def update_robot_pose(self):
