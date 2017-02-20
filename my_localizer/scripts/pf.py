@@ -228,7 +228,7 @@ class ParticleFilter:
             for lidarAngle, dist in enumerate(msg.ranges):
                 if dist != 0.0:
                     lidarAngle = math.radians(lidarAngle)
-                    angle = self.helper_functions.angle_normalize(theta + lidarAngle)
+                    angle = angle_normalize(theta + lidarAngle)
                     coordinate_list.append((x + dist * math.cos(angle), y + dist * math.sin(angle)))
             likelihood = 0
             for point in coordinate_list:
