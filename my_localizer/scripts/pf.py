@@ -99,7 +99,8 @@ class ParticleFilter:
         # Define additional constants
         self.initial_position_deviation = 1		# the std deviation (meters) to use for the initial particles' position distribution
         self.initial_angle_deviation = 60 		# the std deviation (degrees) to use for the initial particles' angle distribution
-
+        self.resample_position_deviation = 0.3
+        self.resample_angle_deviation = 20
 
         # Setup pubs and subs
 
@@ -139,6 +140,7 @@ class ParticleFilter:
         # for now we have commented out the occupancy field initialization until you can successfully fetch the map
         self.occupancy_field = OccupancyField(getMap().map)
         self.initialized = True
+
 
     def update_robot_pose(self):
         """ Update the estimate of the robot's pose given the updated particles.
@@ -206,12 +208,33 @@ class ParticleFilter:
         """
         # make sure the distribution is normalized
         self.normalize_particles()
-        # TODO: fill out the rest of the implementation
+
+        self.particle_cloud = self.draw_random_sample(
+            self.particle_cloud,
+            [p.w for p in self.particle_cloud],
+            self.n_particles
+        )
+
+        # TODO: Need to add noise to resample
+        # for p in self.particle_cloud:
+        #     p.x +=
+        #     p.y += 
 
     def update_particles_with_laser(self, msg):
         """ Updates the particle weights in response to the scan contained in the msg """
-        # TODO: implement this
-        pass
+        for particle in self.particle_cloud:
+            coordinate_list = []
+            x, y, theta = (particle.x, particle.y, particle.theta)
+            for lidarAngle, dist in enumerate(msg.ranges):
+                if dist != 0.0:
+                    lidarAngle = math.radians(lidarAngle)
+                    angle = self.helper_functions.angle_normalize(theta + lidarAngle)
+                    coordinate_list.append((x + dist * math.cos(angle), y + dist * math.sin(angle)))
+            likelihood = 0
+            for point in coordinate_list:
+                closestDist = self.occupancy_field.get_closest_obstacle_distance(point[0], point[1])
+                likelihood += closestDist ** 2
+            particle.w *= likelihood
 
     @staticmethod
     def draw_random_sample(choices, probabilities, n):
