@@ -119,8 +119,6 @@ class ParticleFilter:
 
         self.particle_cloud = []
 
-    
-
         # change use_projected_stable_scan to True to use point clouds instead of laser scans
         self.use_projected_stable_scan = False
         self.last_projected_stable_scan = None
@@ -215,11 +213,12 @@ class ParticleFilter:
             self.n_particles
         )
 
-        # TODO: Need to add noise to resample
-        for p in self.particle_cloud:
-            p.x += self.resample_position_deviation
-            p.y += self.resample_position_deviation
-            p.theta += self.resample_angle_deviation
+        # Add noise to resample
+        self.particle_cloud = [Particle(
+            normal(p.x, self.resample_position_deviation),
+            normal(p.y, self.resample_position_deviation),
+            normal(p.theta, self.resample_angle_deviation),
+        ) for p in self.particle_cloud]
 
     def update_particles_with_laser(self, msg):
         """ Updates the particle weights in response to the scan contained in the msg """
