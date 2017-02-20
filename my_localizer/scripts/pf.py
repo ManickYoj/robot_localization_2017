@@ -123,8 +123,9 @@ class ParticleFilter:
         #       into the init method for OccupancyField
 
         # for now we have commented out the occupancy field initialization until you can successfully fetch the map
-        #self.occupancy_field = OccupancyField(map)
+        self.occupancy_field = OccupancyField(map)
         self.initialized = True
+
 
     def update_robot_pose(self):
         """ Update the estimate of the robot's pose given the updated particles.
@@ -183,8 +184,20 @@ class ParticleFilter:
 
     def update_particles_with_laser(self, msg):
         """ Updates the particle weights in response to the scan contained in the msg """
-        # TODO: implement this
-        pass
+        for particle in self.particle_cloud:
+            coordinate_list = []
+            x, y, theta = (particle.x, particle.y, particle.theta)
+            for lidarAngle, dist in enumerate(msg.ranges):
+                if dist != 0.0:
+                    lidarAngle = math.radians(lidarAngle)
+                    angle = self.helper_functions.angle_normalize(theta + lidarAngle)
+                    coordinate_list.append((x + dist * math.cos(angle), y + dist * math.sin(angle)))
+            likelihood = 0
+            for point in coordinate_list:
+                closestDist = self.occupancy_field.get_closest_obstacle_distance(point[0], point[1])
+                likelihood += closestDist ** 2
+            particle.w *= likelihood
+
 
     @staticmethod
     def weighted_values(values, probabilities, size):
