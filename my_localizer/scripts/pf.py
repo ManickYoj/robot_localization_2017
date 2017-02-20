@@ -98,9 +98,9 @@ class ParticleFilter:
 
         # Define additional constants
         self.initial_position_deviation = 1		# the std deviation (meters) to use for the initial particles' position distribution
-        self.initial_angle_deviation = 60 		# the std deviation (degrees) to use for the initial particles' angle distribution
+        self.initial_angle_deviation = math.pi/3 		# the std deviation (degrees) to use for the initial particles' angle distribution
         self.resample_position_deviation = 0.3
-        self.resample_angle_deviation = 20
+        self.resample_angle_deviation = math.pi/9
 
         # Setup pubs and subs
 
@@ -216,9 +216,10 @@ class ParticleFilter:
         )
 
         # TODO: Need to add noise to resample
-        # for p in self.particle_cloud:
-        #     p.x +=
-        #     p.y += 
+        for p in self.particle_cloud:
+            p.x += self.resample_position_deviation
+            p.y += self.resample_position_deviation
+            p.theta += self.resample_angle_deviation
 
     def update_particles_with_laser(self, msg):
         """ Updates the particle weights in response to the scan contained in the msg """
@@ -272,7 +273,7 @@ class ParticleFilter:
         self.particle_cloud = [Particle(
         	normal(x, self.initial_position_deviation),
         	normal(y, self.initial_position_deviation),
-        	normal(theta, math.radians(self.initial_angle_deviation)),
+        	normal(theta, self.initial_angle_deviation),
         ) for n in xrange(self.n_particles)]
 
         self.normalize_particles()
