@@ -99,7 +99,8 @@ class ParticleFilter:
         # Define additional constants
         self.initial_position_deviation = 1		# the std deviation (meters) to use for the initial particles' position distribution
         self.initial_angle_deviation = 60 		# the std deviation (degrees) to use for the initial particles' angle distribution
-
+        self.resample_position_deviation = 0.3
+        self.resample_angle_deviation = 20
 
         # Setup pubs and subs
 
@@ -192,7 +193,7 @@ class ParticleFilter:
         # make sure the distribution is normalized
         self.normalize_particles()
 
-        ParticleFilter.draw_random_sample(
+        self.particle_cloud = self.draw_random_sample(
             self.particle_cloud,
             [p.w for p in self.particle_cloud],
             self.n_particles
@@ -218,7 +219,6 @@ class ParticleFilter:
                 closestDist = self.occupancy_field.get_closest_obstacle_distance(point[0], point[1])
                 likelihood += closestDist ** 2
             particle.w *= likelihood
-
 
     @staticmethod
     def weighted_values(values, probabilities, size):
