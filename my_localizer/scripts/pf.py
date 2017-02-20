@@ -190,7 +190,17 @@ class ParticleFilter:
         """
         # make sure the distribution is normalized
         self.normalize_particles()
-        # TODO: fill out the rest of the implementation
+
+        ParticleFilter.draw_random_sample(
+            self.particle_cloud,
+            [p.w for p in self.particle_cloud],
+            self.n_particles
+        )
+
+        # TODO: Need to add noise to resample
+        # for p in self.particle_cloud:
+        #     p.x +=
+        #     p.y += 
 
     def update_particles_with_laser(self, msg):
         """ Updates the particle weights in response to the scan contained in the msg """
