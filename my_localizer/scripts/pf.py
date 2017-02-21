@@ -97,10 +97,10 @@ class ParticleFilter:
         self.laser_max_distance = 2.0   # maximum penalty to assess in the likelihood field model
 
         # Define additional constants
-        self.initial_position_deviation = 1		# the std deviation (meters) to use for the initial particles' position distribution
-        self.initial_angle_deviation = math.pi/3 		# the std deviation (degrees) to use for the initial particles' angle distribution
-        self.resample_position_deviation = 0.3
-        self.resample_angle_deviation = math.pi/9
+        self.initial_position_deviation = 0.3		# the std deviation (meters) to use for the initial particles' position distribution
+        self.initial_angle_deviation = math.pi/6 		# the std deviation (degrees) to use for the initial particles' angle distribution
+        self.resample_position_deviation = 0.05
+        self.resample_angle_deviation = math.pi/20
 
         # Setup pubs and subs
 
@@ -146,12 +146,30 @@ class ParticleFilter:
                 (1): compute the mean pose
                 (2): compute the most likely pose (i.e. the mode of the distribution)
         """
-        # first make sure that the particle weights are normalized
+        # First make sure that the particle weights are normalized
         self.normalize_particles()
 
-        # TODO: assign the lastest pose into self.robot_pose as a geometry_msgs.Pose object
-        # just to get started we will fix the robot's pose to always be at the origin
-        self.robot_pose = Pose()
+        x, y, unit_x, unit_y = (0, 0, 0, 0)
+        for p in self.particle_cloud:
+            x += p.x
+            y += p.y
+            unit_x += math.cos(p.theta)
+            unit_y += math.sin(p.theta)
+
+
+        # Assign the latest pose into self.robot_pose as a geometry_msgs.Pose object
+        self.robot_pose = Pose(
+            Point(
+                x / len(self.particle_cloud),
+                y / len(self.particle_cloud),
+                0
+            ),
+            Quaternion(*tf.transformations.quaternion_from_euler(
+                0,
+                0,
+                math.atan2(unit_y, unit_x)
+            ))
+        )
 
     def projected_scan_received(self, msg):
         self.last_projected_stable_scan = msg
@@ -215,9 +233,9 @@ class ParticleFilter:
 
         # Add noise to resample
         self.particle_cloud = [Particle(
-            normal(p.x, self.resample_position_deviation),
-            normal(p.y, self.resample_position_deviation),
-            normal(p.theta, self.resample_angle_deviation),
+            float(normal(p.x, self.resample_position_deviation)),
+            float(normal(p.y, self.resample_position_deviation)),
+            float(normal(p.theta, self.resample_angle_deviation)),
         ) for p in self.particle_cloud]
 
     def update_particles_with_laser(self, msg):
@@ -225,15 +243,19 @@ class ParticleFilter:
         for particle in self.particle_cloud:
             coordinate_list = []
             x, y, theta = (particle.x, particle.y, particle.theta)
+
             for lidarAngle, dist in enumerate(msg.ranges):
                 if dist != 0.0:
                     lidarAngle = math.radians(lidarAngle)
                     angle = angle_normalize(theta + lidarAngle)
                     coordinate_list.append((x + dist * math.cos(angle), y + dist * math.sin(angle)))
+
             likelihood = 0
+
             for point in coordinate_list:
                 closestDist = self.occupancy_field.get_closest_obstacle_distance(point[0], point[1])
-                likelihood += closestDist ** 2
+                likelihood += math.e ** -(closestDist*10)
+
             particle.w *= likelihood
 
     @staticmethod
@@ -270,9 +292,9 @@ class ParticleFilter:
         x, y, theta = xy_theta
 
         self.particle_cloud = [Particle(
-        	normal(x, self.initial_position_deviation),
-        	normal(y, self.initial_position_deviation),
-        	normal(theta, self.initial_angle_deviation),
+        	float(normal(x, self.initial_position_deviation)),
+        	float(normal(y, self.initial_position_deviation)),
+        	float(normal(theta, self.initial_angle_deviation)),
         ) for n in xrange(self.n_particles)]
 
         self.normalize_particles()
@@ -332,9 +354,12 @@ class ParticleFilter:
             self.current_odom_xy_theta = new_odom_xy_theta
             # update our map to odom transform now that the particles are initialized
             self.fix_map_to_odom_transform(msg)
-        elif (math.fabs(new_odom_xy_theta[0] - self.current_odom_xy_theta[0]) > self.d_thresh or
-              math.fabs(new_odom_xy_theta[1] - self.current_odom_xy_theta[1]) > self.d_thresh or
-              math.fabs(new_odom_xy_theta[2] - self.current_odom_xy_theta[2]) > self.a_thresh):
+        elif (
+            len(self.current_odom_xy_theta) < 3 or
+            math.fabs(new_odom_xy_theta[0] - self.current_odom_xy_theta[0]) > self.d_thresh or
+            math.fabs(new_odom_xy_theta[1] - self.current_odom_xy_theta[1]) > self.d_thresh or
+            math.fabs(new_odom_xy_theta[2] - self.current_odom_xy_theta[2]) > self.a_thresh
+        ):
             # we have moved far enough to do an update!
             self.update_particles_with_odom(msg)    # update based on odometry
             if self.last_projected_stable_scan:
