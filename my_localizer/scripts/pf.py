@@ -87,12 +87,12 @@ class ParticleFilter:
         self.base_frame = "base_link"   # the frame of the robot base
         self.map_frame = "map"          # the name of the map coordinate frame
         self.odom_frame = "odom"        # the name of the odometry coordinate frame
-        self.scan_topic = "scan"        # the topic where we will get laser scans from
+        self.scan_topic = "stable_scan"        # the topic where we will get laser scans from
 
-        self.n_particles = 300          # the number of particles to use
+        self.n_particles = 100          # the number of particles to use
 
-        self.d_thresh = 0.2             # the amount of linear movement before performing an update
-        self.a_thresh = math.pi/6       # the amount of angular movement before performing an update
+        self.d_thresh = 0.12            # the amount of linear movement before performing an update
+        self.a_thresh = math.pi/5       # the amount of angular movement before performing an update
 
         self.laser_max_distance = 2.0   # maximum penalty to assess in the likelihood field model
 
@@ -100,7 +100,7 @@ class ParticleFilter:
         self.initial_position_deviation = 0.3		# the std deviation (meters) to use for the initial particles' position distribution
         self.initial_angle_deviation = math.pi/6 		# the std deviation (degrees) to use for the initial particles' angle distribution
         self.resample_position_deviation = 0.05
-        self.resample_angle_deviation = math.pi/20
+        self.resample_angle_deviation = math.pi/10
 
         # Setup pubs and subs
 
@@ -254,7 +254,7 @@ class ParticleFilter:
 
             for point in coordinate_list:
                 closestDist = self.occupancy_field.get_closest_obstacle_distance(point[0], point[1])
-                likelihood += math.e ** -(closestDist*10)
+                likelihood += math.e ** -(closestDist*100)
 
             particle.w *= likelihood
 

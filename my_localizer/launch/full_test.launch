@@ -1,0 +1,20 @@
+<launch>
+  <!-- Map server -->
+  <arg name="map"/>
+  <arg name="scan_topic" default="stable_scan"/>
+
+  <node name="map_server" pkg="map_server" type="map_server" args="$(find my_localizer)/maps/$(arg map).yaml"/>
+  <rosparam param="/use_sim_time">true</rosparam>
+
+
+	<!-- Run Launch files-->
+	<include file="$(find neato_node)/launch/set_urdf.launch" />
+
+  <!-- Localization -->
+  <node name="pf" pkg="my_localizer" type="pf.py" output="screen">
+    <remap from="scan" to="$(arg scan_topic)"/>
+  </node>
+
+  <!-- Run the rosbag -->
+  <node name="rosbag_test" pkg="rosbag" type="play" output="screen" args="--clock $(find my_localizer)/bags/$(arg map).bag"/>
+</launch>
